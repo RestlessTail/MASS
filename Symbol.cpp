@@ -6,6 +6,7 @@ extern SymbolTableType SymbolTable;
 
 SceneTableType SceneTable;
 ActorTableType ActorTable;
+SoundTableType SoundTable;
 
 void Symbol::LoadSymbols()
 {
@@ -21,12 +22,22 @@ void Symbol::LoadSymbols()
 			ActorTable.emplace(s.first, data);
 			break;
 		}
-		case VariableType::SCENE:
+		case VariableType::SCENE: {
 			std::wstring path = ((SceneDataType*)s.second.data)->Texture;
 			unsigned int id;
 			TextureLoader::loadTexture(&id, path);
 			SceneTable.emplace(s.first, id);
 			break;
+		}
+		case VariableType::SOUND: {
+			InMemorySoundData data;
+			auto dataPtr = ((SoundDataType*)(s.second.data));
+			data.Filename = dataPtr->Filename;
+			data.loop = dataPtr->loop;
+			//data.mix = dataPtr->mix;
+			SoundTable.emplace(s.first, data);
+			break;
+		}
 		}
 	}
 }

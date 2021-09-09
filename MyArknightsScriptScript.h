@@ -4,6 +4,7 @@
 #include "GLSLLoader.h"
 #include "Line.h"
 #include <list>
+#include <irrKlang.h>
 
 struct GLFWwindow;
 struct ActionTableItem;
@@ -50,5 +51,6 @@ public:
 	static Attack* attack;
 	static Retreat* retreat;
 	int delayFrame;
+	irrklang::ISoundEngine* SoundEngine;
 };
 

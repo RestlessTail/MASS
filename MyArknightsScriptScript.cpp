@@ -21,6 +21,7 @@
 #include "Attack.h"
 #include "Retreat.h"
 #include <filesystem>
+#include <irrKlang.h>
 
 #pragma warning(disable:4996)
 
@@ -30,8 +31,9 @@ ActionTableType::iterator curAction;
 
 extern SceneTableType SceneTable;
 extern ActorTableType ActorTable;
+extern SoundTableType SoundTable;
 
-std::filesystem::path curPath;
+std::filesystem::path execPath;
 std::filesystem::path scriptPath;
 
 Actor* MyArknightsScriptScript::ActiveCharacterL = nullptr;
@@ -56,6 +58,15 @@ Retreat* MyArknightsScriptScript::retreat = nullptr;
 
 MyArknightsScriptScript::MyArknightsScriptScript(const char* filename)
 {
+#ifdef _DEBUG
+    execPath = std::filesystem::current_path();
+#else
+    TCHAR exePathCstr[256] = { 0 };
+    GetModuleFileName(0, exePathCstr, 255);
+    execPath = std::filesystem::path(exePathCstr);
+    execPath = execPath.parent_path();
+    std::filesystem::current_path(execPath);
+#endif
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -194,7 +205,8 @@ MyArknightsScriptScript::MyArknightsScriptScript(const char* filename)
     setlocale(LC_ALL, "chs");
     scriptPath = std::filesystem::path(filename);
     scriptPath = scriptPath.parent_path();
-    curPath = std::filesystem::current_path();
+
+    SoundEngine = irrklang::createIrrKlangDevice();
 
     FILE* fp = fopen(filename, "r");
     std::filesystem::current_path(scriptPath);
@@ -202,7 +214,7 @@ MyArknightsScriptScript::MyArknightsScriptScript(const char* filename)
     fclose(fp);
     Symbol::LoadSymbols();
     curAction = ActionTable.begin();
-    std::filesystem::current_path(curPath);
+    //std::filesystem::current_path(execPath);
 }
 
 void MyArknightsScriptScript::paint(){
@@ -520,6 +532,25 @@ void MyArknightsScriptScript::processAction()
             nextAction();
             break;
         }
+        break;
+    }
+    case ActionType::PLAYSOUND: {
+        if (!ActionInitFlag) {
+            std::wstring id = *(curAction->data.begin());
+            InMemorySoundData data = SoundTable.find(id)->second;
+
+            std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+            if (data.loop) {
+                std::string f = converter.to_bytes(data.Filename);
+                    //SoundEngine = irrklang::createIrrKlangDevice();
+                    SoundEngine->play2D(f.c_str(), GL_TRUE);
+            }
+            else {
+                std::string f = converter.to_bytes(data.Filename);
+                SoundEngine->play2D(f.c_str(), GL_FALSE);
+            }
+        }
+        nextAction();
         break;
     }
     default:

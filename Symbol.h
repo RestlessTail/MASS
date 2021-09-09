@@ -7,8 +7,15 @@ typedef struct {
 	unsigned int Texture;
 } InMemoryActorData;
 
+typedef struct {
+	std::wstring Filename;
+	bool mix;
+	bool loop;;
+} InMemorySoundData;
+
 typedef std::unordered_map<std::wstring, unsigned int> SceneTableType;
 typedef std::unordered_map<std::wstring, InMemoryActorData> ActorTableType;
+typedef std::unordered_map<std::wstring, InMemorySoundData> SoundTableType;
 
 namespace Symbol
 {
