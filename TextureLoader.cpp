@@ -11,13 +11,15 @@
 #include FT_FREETYPE_H
 #include <locale>
 #include <codecvt>
+#include <filesystem>
 
 #pragma warning(disable:4996)
 
 void TextureLoader::loadTexture(unsigned int* dest, std::wstring path)
 {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-    loadTexture(dest, converter.to_bytes(path));
+    std::filesystem::path p(path);
+    //std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    loadTexture(dest, p);
 }
 
 void TextureLoader::loadTexture(unsigned int* dest, std::string path){
