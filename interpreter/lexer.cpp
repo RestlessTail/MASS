@@ -17,6 +17,7 @@ Keyword KeywordValue; //保存关键词的枚举值
 TokenTableType TokenTable;
 int curRow;
 int curCol;
+bool loadAssetsNow;
 
 const wchar_t* KeywordList[] = {
 	L"DefineCharacter",
@@ -34,7 +35,12 @@ const wchar_t* KeywordList[] = {
 	L"R",
 	L"Exit",
 	L"Delay",
-	L"Retreat"
+	L"Retreat",
+	L"DefineSound",
+	L"Filename",
+	L"Loop",
+	L"NoLoop",
+	L"PlaySound"
 };
 
 void LexerScan(FILE* fp) {
@@ -152,26 +158,50 @@ Token GetToken(FILE* fp) {
 	if (lastChar == L'\"') { //如果读到双引号，说明一个字符串开始了
 		int cursor = 0;
 		memset(StringConstantValue, 0, sizeof(StringConstantValue));
-		while ((lastChar = getWideChar(fp)) != L'\"') { //将数字符串入数组
-			if (lastChar == L'\\') { //处理转义符
-				lastChar = getWideChar(fp);
-				lastChar = Escape(lastChar);
-				if (lastChar == 0) {
-					ErrCode = LexerErr::MISUSE_ESCAPE_CHAR;
+		if (loadAssetsNow) {
+			while ((lastChar = getWideChar(fp)) != L'\"') { //将数字符串入数组
+				if (lastChar == L'\\') { //处理转义符
+					lastChar = getWideChar(fp);
+					lastChar = Escape(lastChar);
+					if (lastChar == 0) {
+						ErrCode = LexerErr::MISUSE_ESCAPE_CHAR;
+						return Token::TOKEN_ERR;
+					}
+					StringConstantValue[cursor] = lastChar;
+					addToCharacterLibrary(lastChar);
+				}
+				else {
+					StringConstantValue[cursor] = lastChar;
+					addToCharacterLibrary(lastChar);
+				}
+
+				++cursor;
+				if (cursor == STRING_LEN_MAX) { //字符串过长，报错
+					ErrCode = LexerErr::TOO_LONG_NUMBER;
 					return Token::TOKEN_ERR;
 				}
-				StringConstantValue[cursor] = lastChar;
-				addToCharacterLibrary(lastChar);
 			}
-			else {
-				StringConstantValue[cursor] = lastChar;
-				addToCharacterLibrary(lastChar);
-			}
+		}
+		else {
+			while ((lastChar = getWideChar(fp)) != L'\"') { //将数字符串入数组
+				if (lastChar == L'\\') { //处理转义符
+					lastChar = getWideChar(fp);
+					lastChar = Escape(lastChar);
+					if (lastChar == 0) {
+						ErrCode = LexerErr::MISUSE_ESCAPE_CHAR;
+						return Token::TOKEN_ERR;
+					}
+					StringConstantValue[cursor] = lastChar;
+				}
+				else {
+					StringConstantValue[cursor] = lastChar;
+				}
 
-			++cursor;
-			if (cursor == STRING_LEN_MAX) { //字符串过长，报错
-				ErrCode = LexerErr::TOO_LONG_NUMBER;
-				return Token::TOKEN_ERR;
+				++cursor;
+				if (cursor == STRING_LEN_MAX) { //字符串过长，报错
+					ErrCode = LexerErr::TOO_LONG_NUMBER;
+					return Token::TOKEN_ERR;
+				}
 			}
 		}
 		lastChar = getWideChar(fp);

@@ -25,9 +25,9 @@ public:
 	static LineControl* nameControl;
 	static Shadow* shadow;
 	MyArknightsScriptScript(const char* filename);
-	Scene* ActiveScene;
+	static Scene* ActiveScene;
 	bool FinishActionNow;
-	bool running;//是否离开循环，退出程序
+	static bool running;//是否离开循环，退出程序
 	static GLSLLoader* loader;
 	static bool AcceptUserInput;//此时程序是否接受用户输入
 	static bool ActionInitFlag;//动作的初始化代码是否执行过
@@ -50,7 +50,7 @@ public:
 	static Mask* mask;
 	static Attack* attack;
 	static Retreat* retreat;
-	int delayFrame;
+	static int delayFrame;
 	irrklang::ISoundEngine* SoundEngine;
 };
 

@@ -22,16 +22,19 @@
 #include "Retreat.h"
 #include <filesystem>
 #include <irrKlang.h>
+#include "Action.h"
 
 #pragma warning(disable:4996)
 
 extern SymbolTableType SymbolTable;
 extern ActionTableType ActionTable;
-ActionTableType::iterator curAction;
+std::list<MASSAction::Action*>::iterator curAction;
 
 extern SceneTableType SceneTable;
 extern ActorTableType ActorTable;
 extern SoundTableType SoundTable;
+
+extern bool loadAssetsNow;
 
 std::filesystem::path execPath;
 std::filesystem::path scriptPath;
@@ -55,18 +58,11 @@ ButtonBack* MyArknightsScriptScript::buttonBack = nullptr;
 Mask* MyArknightsScriptScript::mask = nullptr;
 Attack* MyArknightsScriptScript::attack = nullptr;
 Retreat* MyArknightsScriptScript::retreat = nullptr;
-
+Scene* MyArknightsScriptScript::ActiveScene = nullptr;
+bool MyArknightsScriptScript::running = true;
+int MyArknightsScriptScript::delayFrame = 0;
 MyArknightsScriptScript::MyArknightsScriptScript(const char* filename)
 {
-#ifdef _DEBUG
-    execPath = std::filesystem::current_path();
-#else
-    TCHAR exePathCstr[256] = { 0 };
-    GetModuleFileName(0, exePathCstr, 255);
-    execPath = std::filesystem::path(exePathCstr);
-    execPath = execPath.parent_path();
-    std::filesystem::current_path(execPath);
-#endif
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -137,7 +133,6 @@ MyArknightsScriptScript::MyArknightsScriptScript(const char* filename)
     nameControl->addCharacterDelay = 0;
 
     ActionInitFlag = false;
-    running = true;
 
     shadow = new Shadow;
     shadow->setupVertex(
@@ -200,7 +195,6 @@ MyArknightsScriptScript::MyArknightsScriptScript(const char* filename)
     MouseReleaseFlag = true;
     ActiveScene = nullptr;
     FinishActionNow = false;
-    delayFrame = 0;
 
     setlocale(LC_ALL, "chs");
     scriptPath = std::filesystem::path(filename);
@@ -210,9 +204,9 @@ MyArknightsScriptScript::MyArknightsScriptScript(const char* filename)
 
     FILE* fp = fopen(filename, "r");
     std::filesystem::current_path(scriptPath);
+    loadAssetsNow = true;
     Parse(fp);
     fclose(fp);
-    Symbol::LoadSymbols();
     curAction = ActionTable.begin();
     //std::filesystem::current_path(execPath);
 }
@@ -301,240 +295,8 @@ void MyArknightsScriptScript::nextAction(){
 
 void MyArknightsScriptScript::processAction()
 {
-    switch (curAction->type) {
-    case ActionType::USESCENE:{
-        //虽然在更新了Scene后其透明度的初始值也是0.0f，但在调用paint()后已经增加了一个步长，因此并不会在这里被删掉
-        if (ActiveScene == nullptr || ActiveScene->transparency <= 0.0f) {
-            delete ActiveScene;
-            std::wstring textureKey = *(curAction->data.begin());
-            unsigned int textureID = SceneTable.find(textureKey)->second;
-            ActiveScene = new Scene(textureID);
-            nextAction();
-            break;
-        }
-        if (ActiveScene->unloading == false) {
-            ActiveScene->loading = false;
-            ActiveScene->unloading = true;
-        }
-        break;
-    }
-    case ActionType::VOICEOVER: {
-        if (!ActionInitFlag) {
-            lineControl->clear();
-            nameControl->clear();
-            if (FinishActionNow) { //若收到快进指令，则将两个字符显示的间隔设成0
-                lineControl->addCharacterDelay = 0;
-            }
-            auto itr = curAction->data.begin();
-            std::wstring content = *itr;
-            lineControl->buffer = content;
-            logView->addLog(L"", content);
-            ActionInitFlag = true;
-        }
-        
-        if (lineControl->curCharacter + 1 >= lineControl->buffer.size()) { //执行下一条命令的条件是buffer中的字符已经全部显示    
-            WaitForNextAction = true;
-        }
-        break;
-    }
-    case ActionType::SAY: {
-        if (!ActionInitFlag) {
-            lineControl->clear();
-            nameControl->clear();
-            auto itr = curAction->data.begin();
-            std::wstring name = ActorTable.find(*itr)->second.Name;
-            ++itr;
-            std::wstring content = *itr;
-            nameControl->buffer = name;
-            lineControl->buffer = content;
-            logView->addLog(name, content);
-            ActionInitFlag = true;
-        }
-        if (ActiveCharacterL) {
-            if (ActiveCharacterL->name == nameControl->buffer) {
-                ActiveCharacterL->brightness = 1.0f;
-            }
-            else {
-                ActiveCharacterL->brightness = 0.5f;
-            }
-        }
-        if (ActiveCharacterR) {
-            if (ActiveCharacterR->name == nameControl->buffer) {
-                ActiveCharacterR->brightness = 1.0f;
-            }
-            else {
-                ActiveCharacterR->brightness = 0.5f;
-            }
-        }
-
-        if (lineControl->curCharacter + 1 >= lineControl->buffer.size() || nameControl->curCharacter + 1 >= nameControl->buffer.size()) { //执行下一条命令的条件是buffer中的字符已经全部显示    
-            WaitForNextAction = true;
-        }
-        break;
-    }
-    case ActionType::FINISH: {
-        lineControl->clear();
-        nameControl->clear();
-        //虽然在更新了Scene后其透明度的初始值也是0.0f，但在调用paint()后已经增加了一个步长，因此并不会在这里被删掉
-        if (ActiveCharacterL) {
-            ActiveCharacterL->unloading = true;
-        }
-        if (ActiveCharacterR) {
-            ActiveCharacterR->unloading = true;
-        }
-        if (ActiveScene == nullptr || ActiveScene->transparency <= 0.0f) {
-            delete ActiveScene;
-            running = false;
-        }
-        else if (ActiveScene->unloading == false) {
-            ActiveScene->loading = false;
-            ActiveScene->unloading = true;
-        }
-        break;
-    }
-    case ActionType::ENTER: {
-        auto itr = curAction->data.begin();
-        std::wstring actorKey = *itr;
-        ++itr;
-        std::wstring position = *itr;
-
-        if (position == L"L") {
-            //将unloading不断设置成true，直到透明度小于等于0。在此之前不会执行下一道命令。
-            if (ActiveCharacterL == nullptr || ActiveCharacterL->transparency <= 0.0f) {
-                delete ActiveCharacterL;
-                auto data = ActorTable.find(actorKey);
-                unsigned int textureID = data->second.Texture;
-                ActiveCharacterL = new Actor(textureID);
-                ActiveCharacterL->setupVertex({ -1.2f, 0.7f, 0.0f }, { 0.3f, 0.7f, 0.0f }, { -1.2f, -1.5f, 0.0f }, { 0.3f, -1.5f, 0.0f });
-                ActiveCharacterL->reflect = true;
-                ActiveCharacterL->name = data->second.Name;
-
-                //确保这里的操作只进行一次
-                nextAction();
-            }
-            else if (ActiveCharacterL->unloading == false) {
-                ActiveCharacterL->loading = false;
-                ActiveCharacterL->unloading = true;
-            }
-        }
-        else {
-            if (ActiveCharacterR == nullptr || ActiveCharacterR->transparency <= 0.0f) {
-                delete ActiveCharacterR;
-                auto data = ActorTable.find(actorKey);
-                unsigned int textureID = data->second.Texture;
-                ActiveCharacterR = new Actor(textureID);
-                ActiveCharacterR->setupVertex({ -0.3f, 0.7f, 0.0f }, { 1.2f, 0.7f, 0.0f }, { -0.3f, -1.5f, 0.0f }, { 1.2f, -1.5f, 0.0f });
-                ActiveCharacterR->name = data->second.Name;
-
-                nextAction();
-            }
-            else if (ActiveCharacterR->unloading == false) {
-                ActiveCharacterR->loading = false;
-                ActiveCharacterR->unloading = true;
-            }
-        }
-        break;
-    }
-    case ActionType::EXIT: {
-        std::wstring arg1;
-        std::wstring arg2;
-        auto itr = curAction->data.begin();
-        arg1 = *itr;
-        ++itr;
-        arg2 = *itr;
-
-        if (arg2 == L"K") {
-            if (arg1 == L"L") {
-                ActiveCharacterL->unloading = true;
-            }
-            else {
-                ActiveCharacterR->unloading = true;
-            }
-        }
-        else {
-            auto data = ActorTable.find(arg1);
-            std::wstring name = data->second.Name;
-
-            if (ActiveCharacterL->name == name) {
-                ActiveCharacterL->unloading = true;
-            }
-            else if (ActiveCharacterR->name == name) {
-                ActiveCharacterR->unloading = true;
-            }
-            else {
-                std::wstring msg = L"No such character named " + name + L". No character will exit.";
-                RTWarning(msg.c_str());
-            }
-        }
-        nextAction();
-        break;
-    }
-    case ActionType::ATTACK: {
-        if (!ActionInitFlag) {
-            auto itr = curAction->data.begin();
-            std::wstring name = ActorTable.find(*itr)->second.Name;
-
-            mask->visible = true;
-            if (ActiveCharacterL->name == name) {
-                attack->enable('L');
-            }
-            else {
-                attack->enable('R');
-            }
-            
-            ActionInitFlag = true;
-        }
-
-        if (attack->finished) {
-            mask->visible = false;
-            attack->disable();
-            nextAction();
-            break;
-        }
-        break;
-    }
-    case ActionType::DELAY: {
-        if (!ActionInitFlag) {
-            auto itr = curAction->data.begin();
-            std::wstring delayMs = *itr;
-            delayFrame = static_cast<int>(0.06f * _wtoi(delayMs.c_str()));
-
-            ActionInitFlag = true;
-        }
-        if (delayFrame <= 0) {
-            nextAction();
-        }
-        else {
-            --delayFrame;
-        }
-        
-        break;
-    }
-    case ActionType::RETREAT: {
-        if (!ActionInitFlag) {
-            auto itr = curAction->data.begin();
-            std::wstring name = ActorTable.find(*itr)->second.Name;
-
-            if (ActiveCharacterL->name == name) {
-                retreat->enable('L');
-                //ActiveCharacterL->unloading = true;
-            }
-            else {
-                retreat->enable('R');
-                //ActiveCharacterL->unloading = true;
-            }
-
-            ActionInitFlag = true;
-        }
-
-        if (retreat->finished) {
-            retreat->disable();
-            nextAction();
-            break;
-        }
-        break;
-    }
-    case ActionType::PLAYSOUND: {
+    (*curAction)->exec();
+    /*case ActionType::PLAYSOUND: {
         if (!ActionInitFlag) {
             std::wstring id = *(curAction->data.begin());
             InMemorySoundData data = SoundTable.find(id)->second;
@@ -555,7 +317,7 @@ void MyArknightsScriptScript::processAction()
     }
     default:
         nextAction();
-    }
+    }*/
 }
 
 void MyArknightsScriptScript::RTError(const wchar_t* msg)

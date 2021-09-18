@@ -1,1 +1,1 @@
-#include "MASSVariable.h"
+#include "MASSObject.h"

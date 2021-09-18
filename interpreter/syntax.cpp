@@ -3,6 +3,8 @@
 #include <string>
 #include <stdio.h>
 #include "../CharacterController.h"
+#include "../Action.h"
+#include "../Symbol.h"
 
 extern wchar_t StringIdentifierValue[ID_LEN_MAX]; //储存标识符的名称
 extern wchar_t StringConstantValue[STRING_LEN_MAX]; //储存字符串常量
@@ -14,6 +16,9 @@ int MASSErrors;
 int MASSWarnings;
 extern int curRow;
 extern int curCol;
+extern bool loadAssetsNow;
+
+constexpr int AudioTrackLimit = 8;
 
 Token CurToken;
 
@@ -26,7 +31,9 @@ Token GetNextToken(FILE* fp) {
 }
 
 void Parse(FILE* fp) {
-	CharacterControllerInit();
+	if (loadAssetsNow) {
+		CharacterControllerInit();
+	}
 	curRow = 1;
 	GetNextToken(fp);
 	while(CurToken != Token::TOKEN_EOF) {
@@ -44,9 +51,9 @@ void Parse(FILE* fp) {
 		}
 		GetNextToken(fp);
 	}
-	ActionTableItem item;
-	item.type = ActionType::FINISH;
-	ActionTable.push_back(item);
+	
+	ActionTable.push_back(new MASSAction::Finish);
+	Symbol::LoadSymbols();
 }
 
 void ParseKeyword(FILE* fp) {
@@ -71,6 +78,12 @@ void ParseKeyword(FILE* fp) {
 			break;
 		case Keyword::DELAY:
 			ParseDelay(fp);
+			break;
+		case Keyword::DEFINESOUND:
+			ParseDefineSound(fp);
+			break;
+		case Keyword::PLAYSOUND:
+			ParsePlaySound(fp);
 			break;
 		default:
 			SyntaxError(L"Misused keyword.");
@@ -130,6 +143,7 @@ int ParseCharacterProperty(CharacterDataType* data, FILE* fp) {
 				SyntaxError(L"Expected string after \"Texture\".");
 				break;
 			}
+			
 			data->Texture = std::wstring(StringConstantValue);
 			break;
 		default:
@@ -201,11 +215,10 @@ void ParseVoiceover(FILE* fp) {
 		return;
 	}
 
-	ActionTableItem item;
-	item.type = ActionType::VOICEOVER;
-	item.data.push_back(std::wstring(StringConstantValue));
+	MASSAction::Voiceover* action = new MASSAction::Voiceover;
+	action->content = std::wstring(StringConstantValue);
 
-	ActionTable.push_back(item);
+	ActionTable.push_back(action);
 }
 
 void ParseIdentifier(FILE* fp) {
@@ -247,11 +260,11 @@ void ParseSay(SymbolTableKey& key, FILE* fp) {
 		SyntaxError(key + L" is not a character.");
 	}
 
-	ActionTableItem item;
-	item.type = ActionType::SAY; 
-	item.data.push_back(key);
-	item.data.push_back(std::wstring(StringConstantValue));
-	ActionTable.push_back(item);
+	MASSAction::Say* action = new MASSAction::Say;
+	action->key = key;
+	action->content = std::wstring(StringConstantValue);
+
+	ActionTable.push_back(action);
 }
 
 void ParseUseScene(FILE* fp){
@@ -261,11 +274,10 @@ void ParseUseScene(FILE* fp){
 		return;
 	}
 
-	ActionTableItem item;
-	item.type = ActionType::USESCENE;
-	item.data.push_back(std::wstring(StringIdentifierValue));
+	MASSAction::UseScene* action = new MASSAction::UseScene;
+	action->key = std::wstring(StringIdentifierValue);
 
-	ActionTable.push_back(item);
+	ActionTable.push_back(action);
 }
 
 void ParseEnter(FILE* fp){
@@ -280,33 +292,33 @@ void ParseEnter(FILE* fp){
 
 	GetNextToken(fp);
 	if (CurToken == Token::TOKEN_IDENTIFIER) {
-		ActionTableItem item1;
-		item1.type = ActionType::ENTER;
-		item1.data.push_back(id1);
-		item1.data.push_back(L"L");
-		ActionTable.push_back(item1);
+		MASSAction::Enter* action1 = new MASSAction::Enter;
+		action1->key = id1;
+		action1->position = L'L';
+
+		ActionTable.push_back(action1);
 
 		std::wstring id2(StringIdentifierValue);
-		ActionTableItem item2;
-		item2.type = ActionType::ENTER;
-		item2.data.push_back(id2);
-		item2.data.push_back(L"R");
-		ActionTable.push_back(item2);
+		MASSAction::Enter* action2 = new MASSAction::Enter;
+		action2->key = id2;
+		action2->position = L'R';
+
+		ActionTable.push_back(action2);
 	}
 	else if (CurToken == Token::TOKEN_KEYWORD) {
 		if (KeywordValue == Keyword::L) {
-			ActionTableItem item1;
-			item1.type = ActionType::ENTER;
-			item1.data.push_back(id1);
-			item1.data.push_back(L"L");
-			ActionTable.push_back(item1);
+			MASSAction::Enter* action = new MASSAction::Enter;
+			action->key = id1;
+			action->position = L'L';
+
+			ActionTable.push_back(action);
 		}
 		else if (KeywordValue == Keyword::R) {
-			ActionTableItem item1;
-			item1.type = ActionType::ENTER;
-			item1.data.push_back(id1);
-			item1.data.push_back(L"R");
-			ActionTable.push_back(item1);
+			MASSAction::Enter* action = new MASSAction::Enter;
+			action->key = id1;
+			action->position = L'R';
+
+			ActionTable.push_back(action);
 		}
 		else {
 			SyntaxError(L"Unexpected token after the identifier.");
@@ -317,21 +329,21 @@ void ParseEnter(FILE* fp){
 void ParseExit(FILE* fp)
 {
 	std::wstring arg1;
-	std::wstring arg2;
+	wchar_t arg2;
 
 	GetNextToken(fp);
 	if (CurToken == Token::TOKEN_IDENTIFIER) {
 		arg1 = StringIdentifierValue;
-		arg2 = L"I";
+		arg2 = L'I';
 	}
 	else if (CurToken == Token::TOKEN_KEYWORD) {
 		if (KeywordValue == Keyword::L) {
 			arg1 = L"L";
-			arg2 = L"K";
+			arg2 = L'K';
 		}
 		else if (KeywordValue == Keyword::R) {
 			arg1 = L"R";
-			arg2 = L"K";
+			arg2 = L'K';
 		}
 		else {
 			SyntaxError(L"Unexpected token after \"Exit\".");
@@ -342,19 +354,18 @@ void ParseExit(FILE* fp)
 		return;
 	}
 
-	ActionTableItem item;
-	item.type = ActionType::EXIT;
-	item.data.push_back(arg1);
-	item.data.push_back(arg2);
-	ActionTable.push_back(item);
+	MASSAction::Exit* action = new MASSAction::Exit;
+	action->id = arg1;
+	action->flag = arg2;
+
+	ActionTable.push_back(action);
 }
 
 void ParseAttack(SymbolTableKey& key)
 {
-	ActionTableItem item;
-	item.type = ActionType::ATTACK;
-	item.data.push_back(key);
-	ActionTable.push_back(item);
+	MASSAction::Attack* action = new MASSAction::Attack;
+	action->id = key;
+	ActionTable.push_back(action);
 }
 
 void ParseDelay(FILE* fp)
@@ -364,18 +375,18 @@ void ParseDelay(FILE* fp)
 		SyntaxError(L"Expected integer after \"Delay\"");
 		return;
 	}
-	ActionTableItem item;
-	item.type = ActionType::DELAY;
-	item.data.push_back(std::to_wstring(IntengerConstantValue));
-	ActionTable.push_back(item);
+	MASSAction::Delay* action = new MASSAction::Delay;
+	action->val = IntengerConstantValue;
+
+	ActionTable.push_back(action);
 }
 
 void ParseRetreat(SymbolTableKey& key)
 {
-	ActionTableItem item;
-	item.type = ActionType::RETREAT;
-	item.data.push_back(key);
-	ActionTable.push_back(item);
+	MASSAction::Retreat* action = new MASSAction::Retreat;
+	action->id = key;
+
+	ActionTable.push_back(action);
 }
 
 void SyntaxError(std::wstring msg) {
@@ -386,4 +397,95 @@ void SyntaxError(std::wstring msg) {
 void SyntaxWarning(std::wstring msg) {
 	printf("Syntax Warning at row %d, col %d: %ls\n", curRow, curCol, msg.c_str());
 	++MASSWarnings;
+}
+
+int ParseSoundProperty(SoundDataType* data, FILE* fp)
+{
+	GetNextToken(fp);
+	if (CurToken != Token::TOKEN_KEYWORD) {
+		SyntaxError(L"Missing keyword in the property group.");
+	}
+
+	switch (KeywordValue) {
+	case Keyword::ENDDEFINE:
+		return 0;
+	case Keyword::FILENAME:
+		GetNextToken(fp);
+		if (CurToken != Token::TOKEN_STRING) {
+			SyntaxError(L"Expected string after \"Filename\".");
+			break;
+		}
+		data->Filename = std::wstring(StringConstantValue);
+		break;
+	case Keyword::LOOP:
+		data->loop = true;
+		break;
+	case Keyword::NOLOOP:
+		data->loop = false;
+		break;
+	default:
+		SyntaxError(L"Unexpected keyword in the property group.");
+		break;
+	}
+
+	return 1;
+}
+
+void ParseDefineSound(FILE* fp)
+{
+	SymbolTableValue value;
+	GetNextToken(fp);
+	if (CurToken != Token::TOKEN_IDENTIFIER) {
+		SyntaxError(L"Expected identifier after \"DefineSound\".");
+		return;
+	}
+
+	SymbolTableKey key = StringIdentifierValue;
+	value.type = VariableType::SOUND;
+
+	GetNextToken(fp);
+	if (CurToken != Token::TOKEN_KEYWORD || KeywordValue != Keyword::WHOSE) {
+		SyntaxError(L"Expected keyword \"Whose\" after the identifier.");
+		return;
+	}
+
+	SoundDataType* data = new SoundDataType;
+	while (ParseSoundProperty(data, fp)) {
+		//解析属性
+	}
+
+	value.data = data;
+
+	SymbolTable.emplace(key, value);
+}
+
+void ParsePlaySound(FILE* fp)
+{
+	/*ActionTableItem item;
+	item.type = ActionType::PLAYSOUND;
+
+	//数据储存格式 第一个wstring：角色标识符。第二个wstring：位置（左/右）。
+	GetNextToken(fp);
+	if (CurToken != Token::TOKEN_IDENTIFIER) {
+		SyntaxError(L"Expected identifier after \"PlaySound\".");
+		return;
+	}
+
+	std::wstring id(StringIdentifierValue);
+	item.data.push_back(id);
+
+	GetNextToken(fp);
+
+	if (CurToken != Token::TOKEN_IDENTIFIER) {
+		SyntaxError(L"Please specify a track.");
+		return;
+	}
+	if (IntengerConstantValue > AudioTrackLimit) {
+		SyntaxError(L"Track out of limit.");
+		return;
+	}
+
+	
+	item.data.push_back(std::to_wstring(IntengerConstantValue));
+	ActionTable.push_back(item);*/
 }

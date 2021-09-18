@@ -44,7 +44,13 @@ enum class Keyword {
 	R,
 	EXIT,
 	DELAY,
-	RETREAT
+	RETREAT,
+	DEFINESOUND,
+	FILENAME,
+	LOOP,
+	NOLOOP,
+	PLAYSOUND
+
 };
 
 void LexerScan(FILE* fp);

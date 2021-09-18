@@ -5,10 +5,12 @@
 #include <stdio.h>
 #include <unordered_map>
 #include "lexer.h"
+#include "../Action.h"
 
 enum class VariableType{
 	CHARACTER = 0,
-	SCENE
+	SCENE,
+	SOUND
 };
 
 struct CharacterDataType{
@@ -20,6 +22,11 @@ struct SceneDataType{
 	std::wstring Texture;
 };
 
+struct SoundDataType {
+	std::wstring Filename;
+	bool loop;
+};
+
 enum class ActionType{
 	SAY = 0,
 	VOICEOVER,
@@ -29,7 +36,8 @@ enum class ActionType{
 	FINISH,
 	ATTACK,
 	DELAY,
-	RETREAT
+	RETREAT,
+	PLAYSOUND
 };
 
 typedef std::wstring SymbolTableKey;
@@ -46,7 +54,7 @@ struct ActionTableItem{
 };
 
 typedef std::unordered_map<SymbolTableKey, SymbolTableValue> SymbolTableType;
-typedef std::list<ActionTableItem> ActionTableType;
+typedef std::list<MASSAction::Action*> ActionTableType;
 
 void Parse(FILE* fp);
 Token GetNextToken(FILE* fp);
@@ -69,3 +77,6 @@ void ParseDelay(FILE* fp);
 void ParseRetreat(SymbolTableKey& key);
 void SyntaxError(std::wstring msg);
 void SyntaxWarning(std::wstring msg);
+int ParseSoundProperty(SoundDataType* data, FILE* fp);
+void ParseDefineSound(FILE* fp);
+void ParsePlaySound(FILE* fp);
