@@ -9,13 +9,9 @@ static FT_Library ft;
 FT_Face FTFace;
 int characterHeight; //文字高度（宽度自动计算）
 static std::unordered_map<wchar_t, Character> characterLibrary;
-extern std::filesystem::path execPath;
-extern std::filesystem::path scriptPath;
 
 void CharacterControllerInit()
 {
-    std::filesystem::current_path(execPath);
-
     characterHeight = 48;
 
     if (FT_Init_FreeType(&ft)) {
@@ -26,8 +22,6 @@ void CharacterControllerInit()
     }
 
     FT_Set_Pixel_Sizes(FTFace, 0, characterHeight);
-
-    std::filesystem::current_path(scriptPath);
 }
 
 void addToCharacterLibrary(wchar_t ch)

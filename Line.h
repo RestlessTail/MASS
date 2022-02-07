@@ -33,6 +33,8 @@ public:
 	void clear();
 	void nextLine();
 	void addCharacter();
+	void skip();
+	void resetCharacterDelay();
 	void updateyPos(); //根据curCharacter更新纵坐标
 
 	int curCharacter; //已经显示到第几个字

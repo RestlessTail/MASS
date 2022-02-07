@@ -113,6 +113,16 @@ void LineControl::addCharacter(){
     ++curCharacter;
 }
 
+void LineControl::skip()
+{
+    addCharacterDelay = 0;
+}
+
+void LineControl::resetCharacterDelay()
+{
+    addCharacterDelay = 5;
+}
+
 void LineControl::updateyPos(){
     yPos = linePosX - (curCharacter / 30 * (characterHeight * scale + rowSpace) - rowSpace);
 }
