@@ -38,7 +38,7 @@ void LogView::paint()
     glfwGetWindowSize(MyArknightsScriptScript::MainWindow, &winW, &winH);
 
     //计算第一行的坐标
-    //TODO：将X轴方向上的起始点用一个变量保存起来，以便统一修改。重新确定X轴起始点的坐标
+    //将X轴方向上的起始点用一个变量保存起来，以便统一修改。重新确定X轴起始点的坐标
     float contentOriX = -0.35f;
     float nameOriX = -0.41f;
     float curX = contentOriX;

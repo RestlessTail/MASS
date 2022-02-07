@@ -15,5 +15,6 @@ namespace TextureLoader{
 	void loadTexture(unsigned int* dest, std::string path);
 	void loadTexture(unsigned int* dest, FT_Face face);
 	void applyTexture(unsigned int texture);
+	void freeTexture(unsigned int texture);
 };
 

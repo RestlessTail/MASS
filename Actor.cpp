@@ -5,15 +5,16 @@
 #include <math.h> 
 #include "MyArknightsScriptScript.h"
 
-Actor::Actor(unsigned int t)
+Actor::Actor(std::wstring& actorName, int actorTexture)
 {
-	texture = t;
+	texture = static_cast<unsigned int>(actorTexture);
 	unloading = false;
 	loading = true;
 	transparency = 0.0f;
 	reflect = false;
 	brightness = 1.0f;
 	transform = glm::mat4(1.0f);
+	name = actorName;
 }
 
 void Actor::paint()

@@ -5,6 +5,9 @@
 #include "Line.h"
 #include <list>
 #include <irrKlang.h>
+#include "Sound.h"
+#include "Action.h"
+#include <map>
 
 struct GLFWwindow;
 struct ActionTableItem;
@@ -18,16 +21,18 @@ class Retreat;
 
 class MyArknightsScriptScript{
 public:
+	static std::map<int, SoundSource_t*> AllSoundSource;
+	static std::map<int, Actor_t*> AllActor;
 	static Actor* ActiveCharacterL;
 	static Actor* ActiveCharacterR;
 	static GLFWwindow* MainWindow;
 	static LineControl* lineControl;
 	static LineControl* nameControl;
 	static Shadow* shadow;
-	MyArknightsScriptScript(const char* filename);
-	Scene* ActiveScene;
+	MyArknightsScriptScript();
+	static Scene* ActiveScene;
 	bool FinishActionNow;
-	bool running;//是否离开循环，退出程序
+	static bool running;//是否离开循环，退出程序
 	static GLSLLoader* loader;
 	static bool AcceptUserInput;//此时程序是否接受用户输入
 	static bool ActionInitFlag;//动作的初始化代码是否执行过
@@ -50,7 +55,9 @@ public:
 	static Mask* mask;
 	static Attack* attack;
 	static Retreat* retreat;
-	int delayFrame;
-	irrklang::ISoundEngine* SoundEngine;
+	static int delayFrame;
+	static irrklang::ISoundEngine* irrklangSoundEngine;
+	static MASSSoundEngine* soundEngine;
+	MASSAction::Action* curAction;
 };
 

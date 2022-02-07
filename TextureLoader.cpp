@@ -6,26 +6,17 @@
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
 #include <iostream>
-#include <filesystem>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include <locale>
 #include <codecvt>
-#include <filesystem>
 #include <windows.h>
+#include "utils.h"
 #pragma warning(disable:4996)
 
 void TextureLoader::loadTexture(unsigned int* dest, std::wstring path)
 {
-    int len = WideCharToMultiByte(CP_ACP, 0, path.c_str(), path.size(), nullptr, 0, nullptr, nullptr);
-    char* buf = (char*)calloc(len + 1, sizeof(char));
-    WideCharToMultiByte(CP_ACP, 0, path.c_str(), path.size(), buf, len, nullptr, nullptr);
-    buf[len] = 0;
-    std::string strPath(buf);
-    free(buf);
-    //std::filesystem::path p{ path, std::locale("zh_CN.gbk") };
-    //std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-    loadTexture(dest, strPath);
+    loadTexture(dest, MASSutils::wstring2string(path));
 }
 
 void TextureLoader::loadTexture(unsigned int* dest, std::string path){
@@ -85,4 +76,9 @@ void TextureLoader::loadTexture(unsigned int* dest, FT_Face face)
 void TextureLoader::applyTexture(unsigned int texture){
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
+}
+
+void TextureLoader::freeTexture(unsigned int texture)
+{
+    glDeleteTextures(1, &texture);
 }

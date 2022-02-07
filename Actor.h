@@ -10,7 +10,7 @@
 
 class Actor : public RectangleObject{
 public:
-	Actor(unsigned int t);
+	Actor(std::wstring& actorName, int actorTexture);
 	void paint() override;
 	float brightness;
 	float transparency;
