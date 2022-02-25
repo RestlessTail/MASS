@@ -590,9 +590,12 @@ header, .context-menu, .megamenu-content, footer{
 
 
 
-</style><title>credit</title>
+</style><title>export</title>
 </head>
 <body class='typora-export os-windows'><div class='typora-export-content'>
-<div id='write'  class=''><ul><li><span>Portions of this software are copyright (c) 2.10.4 The FreeType Project (</span><a href='http://www.freetype.org' target='_blank' class='url'>www.freetype.org</a><span>). All rights reserved.</span></li><li><span>Portions of this software are copyright (c) 2002-2006 Marcus Geelnard, The GLFW Project (</span><a href='https://www.glfw.org/index.html' target='_blank' class='url'>https://www.glfw.org/index.html</a><span>). All rights reserved.</span></li><li><span>Portions of this software are copyright (c) 2006-2019 Camilla Lowy, The GLFW Project (</span><a href='https://www.glfw.org/index.html' target='_blank' class='url'>https://www.glfw.org/index.html</a><span>). All rights reserved.</span></li><li><span>Portions of this software are copyright (c) 2013-2021 David Herberth, The GLAD Project (</span><a href='https://github.com/Dav1dde/glad' target='_blank' class='url'>https://github.com/Dav1dde/glad</a><span>). All rights reserved.</span></li><li><span>Portions of this software are copyright (c) 2017 Sean Barrett, The stb Project (</span><a href='https://github.com/nothings/stb' target='_blank' class='url'>https://github.com/nothings/stb</a><span>). All rights reserved.</span></li><li><span>Portions of this software are copyright (c) 2005 - G-Truc Creation, The glm Project (</span><a href='https://github.com/nothings/stb' target='_blank' class='url'>https://github.com/nothings/stb</a><span>). All rights reserved.</span></li><li><span>Portions of this software are copyright (c) 2005 - G-Truc Creation, The glm Project (</span><a href='https://github.com/nothings/stb' target='_blank' class='url'>https://github.com/nothings/stb</a><span>). All rights reserved.</span></li><li><span>Portions of this software are copyright (c) 2014-2021 Adobe, The source-han-sans Project (</span><a href='http://www.adobe.com/' target='_blank' class='url'>http://www.adobe.com/</a><span>). All rights reserved.</span></li></ul></div></div>
+<div id='write'  class=''><h1 id='关于将脚本导出为二进制文件原生代码）'><span>关于将脚本导出为二进制文件（原生代码）</span></h1><p><span>目前暂不支持将脚本直接导出为二进制文件。尽管这一点在技术上是可行的，但这么做的代价似乎过高了。</span>
+<span>目前的思路是将脚本翻译成C++代码，再调用本地的编译器编译。但是最新版的MinGW解压后可达500MB，将其嵌入一个不到10MB（实际上去掉字体只有大约1MB）的程序实在有些尴尬。而实际上MinGW在编译时可能会出现问题（目前SourceForge上的MinGW的gcc版本只有8.1.0，对于C++17的支持似乎并不是太好），而MSVC的体积则更甚于MinGW。</span>
+<span>此外由于此程序的编译需要Freetype库和GLFW库的支持，若要导出二进制文件，则还需要与平台及编译器对应的静态库文件。</span>
+<span>综上所述，脚本导出为二进制文件这一点尽管在技术上可行，但实际操作上还存在诸多困难，在以后的版本中可能会添加导出二进制文件的支持，但目前而言暂时无法做到。</span></p></div></div>
 </body>
 </html>
